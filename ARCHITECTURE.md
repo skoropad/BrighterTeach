@@ -81,7 +81,7 @@ On mount, `loadMessages()` and `loadSession()` read from storage with try/catch 
 
 ### API Route: `POST /api/chat`
 
-Single route handler in `app/api/chat/route.ts`. No middleware, no database.
+Single route handler in `app/api/chat/route.ts`. No database. Root `middleware.ts` handles security headers only (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) — it does not touch routing or request bodies.
 
 **Request body:**
 

@@ -64,22 +64,26 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project Structure
 
 ```
+middleware.ts                  # Security headers — CSP, X-Frame-Options, Referrer-Policy
 app/
 ├── api/chat/
 │   ├── route.ts              # POST /api/chat — streaming AI endpoint
 │   └── __tests__/route.test.ts
 ├── page.tsx                   # Main page — state, useChat, layout
-├── layout.tsx                 # Root layout — font, metadata, Toaster
+├── layout.tsx                 # Root layout — font, metadata, Toaster, ErrorBoundary
 └── __tests__/page.test.tsx
 components/
-├── workspace-card.tsx         # Left panel — grade, subject, question input
+├── workspace-card.tsx         # Left panel — grade, subject, question input, image upload
 ├── tutor-chat.tsx             # Right panel — message list, follow-up input with image upload
 ├── header.tsx                 # App header with "Start New Session" button
+├── error-boundary.tsx         # React error boundary — clears storage and reloads on reset
 ├── __tests__/                 # Component tests
 └── ui/                        # shadcn/ui primitives (button, card, input, textarea, select)
 lib/
 ├── build-system-prompt.ts     # Dynamic system prompt construction
+├── rate-limit.ts              # In-memory sliding-window rate limiter (20 req/min per IP)
 ├── constants.ts               # Shared types and config
+├── utils.ts                   # cn() utility (clsx + tailwind-merge)
 └── __tests__/
 test/
 └── setup.ts                   # Vitest setup — jsdom polyfills

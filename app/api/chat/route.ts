@@ -76,7 +76,7 @@ export async function POST(req: Request) {
       model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 1024,
+      maxOutputTokens: mode === "hint" ? 256 : 1024,
     });
 
     return result.toUIMessageStreamResponse({
