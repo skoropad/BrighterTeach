@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useReducer, useEffect, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import type { UIMessage } from "ai"
 import { z } from "zod"
@@ -15,6 +15,12 @@ interface Session {
   subject: Subject
   mode: Mode
   hasSubmitted: boolean
+}
+
+interface HomeState {
+  session: Session
+  resetKey: number
+  isHydrated: boolean
 }
 
 const DEFAULT_SESSION: Session = {
@@ -43,6 +49,41 @@ const messageSchema = z.object({
 })
 
 const messagesSchema = z.array(messageSchema)
+
+const INITIAL_HOME_STATE: HomeState = {
+  session: DEFAULT_SESSION,
+  resetKey: 0,
+  isHydrated: false,
+}
+
+type HomeAction =
+  | { type: "hydrate"; session: Session }
+  | { type: "submitSession"; session: Session }
+  | { type: "clearSession" }
+
+function homeReducer(state: HomeState, action: HomeAction): HomeState {
+  switch (action.type) {
+    case "hydrate":
+      return {
+        session: action.session,
+        resetKey: action.session.hasSubmitted ? state.resetKey + 1 : state.resetKey,
+        isHydrated: true,
+      }
+    case "submitSession":
+      return {
+        ...state,
+        session: action.session,
+      }
+    case "clearSession":
+      return {
+        ...state,
+        session: DEFAULT_SESSION,
+        resetKey: state.resetKey + 1,
+      }
+    default:
+      return state
+  }
+}
 
 function loadSession(): Session {
   try {
@@ -77,14 +118,10 @@ function safeSetItem(key: string, value: string) {
 }
 
 export default function HomePage() {
-  const [initialMessages] = useState<UIMessage[]>(() => loadMessages())
-  const [session, setSession] = useState<Session>(() =>
-    typeof window === "undefined" ? DEFAULT_SESSION : loadSession()
-  )
-  const [resetKey, setResetKey] = useState(0)
+  const [homeState, dispatch] = useReducer(homeReducer, INITIAL_HOME_STATE)
 
   const { messages, sendMessage, setMessages, status } = useChat({
-    messages: initialMessages,
+    messages: [] as UIMessage[],
     onError: () => {
       toast.error("Oops! Something went wrong. Please try again.")
     },
@@ -92,28 +129,41 @@ export default function HomePage() {
 
   const isLoading = status === "streaming" || status === "submitted"
   const isThinking = status === "submitted"
+  const isUiReady = homeState.isHydrated
 
   useEffect(() => {
+    const restoredMessages = loadMessages()
+    if (restoredMessages.length > 0) {
+      setMessages(restoredMessages)
+    }
+    dispatch({ type: "hydrate", session: loadSession() })
+  }, [setMessages])
+
+  useEffect(() => {
+    if (!homeState.isHydrated) return
+
     if (messages.length > 0) {
       safeSetItem(STORAGE_KEYS.messages, JSON.stringify(messages))
     } else {
       localStorage.removeItem(STORAGE_KEYS.messages)
     }
-  }, [messages])
+  }, [homeState.isHydrated, messages])
 
   useEffect(() => {
-    if (session.hasSubmitted) {
-      safeSetItem(STORAGE_KEYS.session, JSON.stringify(session))
+    if (!homeState.isHydrated) return
+
+    if (homeState.session.hasSubmitted) {
+      safeSetItem(STORAGE_KEYS.session, JSON.stringify(homeState.session))
     } else {
       localStorage.removeItem(STORAGE_KEYS.session)
     }
-  }, [session])
+  }, [homeState.isHydrated, homeState.session])
 
   const handleSubmit = useCallback(
     (problem: string, grade: string, subject: Subject, mode: Mode, context?: string, files?: FileList) => {
       const gradeNum = parseInt(grade)
       const newSession: Session = { grade: gradeNum, subject, mode, hasSubmitted: true }
-      setSession(newSession)
+      dispatch({ type: "submitSession", session: newSession })
 
       const hasText = !!problem.trim()
       const text = hasText
@@ -135,47 +185,55 @@ export default function HomePage() {
   )
 
   const handleSendMessage = useCallback(
-    (message: string, files?: FileList) => {
+    (message: string) => {
       sendMessage(
-        { text: message, files },
-        { body: { grade: session.grade, subject: session.subject, mode: session.mode } }
+        { text: message },
+        {
+          body: {
+            grade: homeState.session.grade,
+            subject: homeState.session.subject,
+            mode: homeState.session.mode,
+          },
+        }
       )
     },
-    [sendMessage, session.grade, session.subject, session.mode]
+    [sendMessage, homeState.session.grade, homeState.session.subject, homeState.session.mode]
   )
 
   const handleClearHistory = useCallback(() => {
     setMessages([])
-    setSession(DEFAULT_SESSION)
-    setResetKey((k) => k + 1)
+    dispatch({ type: "clearSession" })
     localStorage.removeItem(STORAGE_KEYS.messages)
     localStorage.removeItem(STORAGE_KEYS.session)
   }, [setMessages])
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onClearHistory={handleClearHistory} hasHistory={messages.length > 0} />
+      <Header
+        onClearHistory={handleClearHistory}
+        hasHistory={isUiReady && (homeState.session.hasSubmitted || messages.length > 0)}
+      />
 
       <main className="flex-1 px-4 pb-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-[calc(100vh-180px)]">
             <div className="lg:h-full lg:overflow-auto">
               <WorkspaceCard
-                key={resetKey}
+                key={homeState.resetKey}
                 onExplain={(p, g, s, c, f) => handleSubmit(p, g, s, "explain", c, f)}
                 onHint={(p, g, s, c, f) => handleSubmit(p, g, s, "hint", c, f)}
-                isLoading={isLoading}
-                initialGrade={session.hasSubmitted ? session.grade.toString() : ""}
-                initialSubject={session.hasSubmitted ? session.subject : "math"}
+                isLoading={isUiReady && isLoading}
+                initialGrade={homeState.session.hasSubmitted ? homeState.session.grade.toString() : ""}
+                initialSubject={homeState.session.hasSubmitted ? homeState.session.subject : "math"}
               />
             </div>
             <div className="lg:h-full">
               <TutorChat
                 messages={messages}
                 onSendMessage={handleSendMessage}
-                isLoading={isLoading}
-                isThinking={isThinking}
-                isEnabled={session.hasSubmitted}
+                isLoading={isUiReady && isLoading}
+                isThinking={isUiReady && isThinking}
+                isEnabled={isUiReady && homeState.session.hasSubmitted}
               />
             </div>
           </div>

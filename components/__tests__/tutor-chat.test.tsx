@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { UIMessage } from "ai"
 import { TutorChat } from "@/components/tutor-chat"
@@ -77,6 +77,22 @@ describe("TutorChat", () => {
       expect(screen.queryByText("Hint")).not.toBeInTheDocument()
     })
 
+    it("normalizes LaTeX-style division to a division symbol", () => {
+      const messages = [
+        textMessage("assistant", "Solve 6 \\div 2(1 + 2) first."),
+      ]
+      render(<TutorChat {...defaultProps} messages={messages} />)
+      expect(screen.getByText(/6 ÷ 2\(1 \+ 2\)/)).toBeInTheDocument()
+    })
+
+    it("normalizes LaTeX-style multiplication to a multiplication symbol", () => {
+      const messages = [
+        textMessage("assistant", "Now evaluate 6 ÷ 2 \\times 3."),
+      ]
+      render(<TutorChat {...defaultProps} messages={messages} />)
+      expect(screen.getByText(/6 ÷ 2 × 3/)).toBeInTheDocument()
+    })
+
     it("renders an image when user message has a file part", () => {
       const messages: UIMessage[] = [
         {
@@ -132,7 +148,7 @@ describe("TutorChat", () => {
       await user.type(input, "  How about 3+3?  ")
       await user.click(screen.getByRole("button", { name: /send message/i }))
 
-      expect(onSendMessage).toHaveBeenCalledWith("How about 3+3?", undefined)
+      expect(onSendMessage).toHaveBeenCalledWith("How about 3+3?")
     })
 
     it("clears input after submission", async () => {
@@ -156,6 +172,12 @@ describe("TutorChat", () => {
       expect(screen.getByPlaceholderText(/submit a question first/i)).toBeDisabled()
     })
 
+    it("disables input when not enabled even if messages exist", () => {
+      const messages = [textMessage("assistant", "Welcome back!")]
+      render(<TutorChat {...defaultProps} isEnabled={false} messages={messages} />)
+      expect(screen.getByPlaceholderText(/submit a question first/i)).toBeDisabled()
+    })
+
     it("does not call onSendMessage with empty input", async () => {
       const user = userEvent.setup()
       const onSendMessage = vi.fn()
@@ -166,47 +188,4 @@ describe("TutorChat", () => {
     })
   })
 
-  describe("follow-up image upload", () => {
-    it("renders a file input for follow-up images", () => {
-      render(<TutorChat {...defaultProps} />)
-      expect(screen.getByLabelText(/upload follow-up image/i)).toBeInTheDocument()
-    })
-
-    it("renders an attach image button", () => {
-      render(<TutorChat {...defaultProps} />)
-      expect(screen.getByLabelText(/attach image/i)).toBeInTheDocument()
-    })
-
-    it("disables attach button when not enabled", () => {
-      render(<TutorChat {...defaultProps} isEnabled={false} />)
-      expect(screen.getByLabelText(/attach image/i)).toBeDisabled()
-    })
-
-    it("shows preview after selecting an image", async () => {
-      const user = userEvent.setup()
-      render(<TutorChat {...defaultProps} />)
-
-      const file = new File([new ArrayBuffer(1024)], "photo.png", { type: "image/png" })
-      const fileInput = screen.getByLabelText(/upload follow-up image/i)
-      await user.upload(fileInput, file)
-
-      await waitFor(() => {
-        expect(screen.getByAltText("Follow-up image preview")).toBeInTheDocument()
-      })
-    })
-
-    it("calls onSendMessage with files when image is attached", async () => {
-      const user = userEvent.setup()
-      const onSendMessage = vi.fn()
-      render(<TutorChat {...defaultProps} onSendMessage={onSendMessage} />)
-
-      const file = new File([new ArrayBuffer(1024)], "photo.png", { type: "image/png" })
-      const fileInput = screen.getByLabelText(/upload follow-up image/i)
-      await user.upload(fileInput, file)
-      await user.type(screen.getByPlaceholderText(/ask a follow-up/i), "Check this")
-      await user.click(screen.getByRole("button", { name: /send message/i }))
-
-      expect(onSendMessage).toHaveBeenCalledWith("Check this", expect.any(FileList))
-    })
-  })
 })

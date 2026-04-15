@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 
-vi.mock("@ai-sdk/google", () => ({
-  google: vi.fn(() => "mock-model"),
+vi.mock("@ai-sdk/openai", () => ({
+  openai: vi.fn(() => "mock-model"),
 }))
 
 vi.mock("ai", async (importOriginal) => {

@@ -1,6 +1,6 @@
 # BrighterTeach AI Homework Helper
 
-A web app where kids (grades 1-8) can get AI-powered help with math and reading homework. Built with Next.js and Google Gemini, the tutor adapts its language and tone to the child's grade level and offers two modes: step-by-step explanations and progressive hints that guide without giving away the answer.
+A web app where kids (grades 1-8) can get AI-powered help with math and reading homework. Built with Next.js and OpenAI, the tutor adapts its language and tone to the child's grade level and offers two modes: step-by-step explanations and progressive hints that guide without giving away the answer.
 
 ## Features
 
@@ -18,7 +18,7 @@ A web app where kids (grades 1-8) can get AI-powered help with math and reading 
 |-------|-----------|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19, Tailwind CSS 4, shadcn/ui |
-| AI | Vercel AI SDK, Google Gemini 2.5 Flash |
+| AI | Vercel AI SDK, OpenAI GPT-4o mini |
 | Testing | Vitest, React Testing Library |
 | Quality | ESLint, Husky (pre-commit hooks), lint-staged |
 
@@ -39,7 +39,7 @@ cp .env.example .env.local
 Then edit `.env.local`:
 
 ```
-GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
 ```
 
 Start the dev server:
@@ -64,7 +64,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project Structure
 
 ```
-middleware.ts                  # Security headers — CSP, X-Frame-Options, Referrer-Policy
+proxy.ts                       # Security headers — CSP, X-Frame-Options, Referrer-Policy
 app/
 ├── api/chat/
 │   ├── route.ts              # POST /api/chat — streaming AI endpoint

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -192,9 +193,12 @@ export function WorkspaceCard({ onExplain, onHint, isLoading, initialGrade, init
           />
           {previewUrl ? (
             <div className="relative inline-block">
-              <img
+              <Image
                 src={previewUrl}
                 alt="Homework preview"
+                width={200}
+                height={200}
+                unoptimized
                 className="rounded-2xl border-2 border-border max-w-[200px] max-h-[200px] object-cover"
               />
               <button

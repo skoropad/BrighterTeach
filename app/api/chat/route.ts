@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { buildSystemPrompt } from "@/lib/build-system-prompt";
 import { rateLimit } from "@/lib/rate-limit";
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     const systemPrompt = buildSystemPrompt(grade, subject, mode, hasImage);
 
     const result = streamText({
-      model: google("gemini-2.5-flash"),
+      model: openai("gpt-4o-mini"),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
       maxOutputTokens: mode === "hint" ? 256 : 1024,

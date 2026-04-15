@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import Image from "next/image"
 import type { UIMessage } from "ai"
 import ReactMarkdown from "react-markdown"
 import rehypeSanitize from "rehype-sanitize"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { MessageCircle, Send, Bot, User, Loader2, Camera, X } from "lucide-react"
-import { toast } from "sonner"
+import { MessageCircle, Send, Bot, User, Loader2 } from "lucide-react"
 import { HINT_PREFIX } from "@/lib/constants"
 
 function getMessageText(message: UIMessage): string {
@@ -24,11 +24,15 @@ function getMessageImages(message: UIMessage): Array<{ url: string }> {
   )
 }
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+function normalizeMathText(text: string): string {
+  return text
+    .replace(/\\div\b/g, "÷")
+    .replace(/\\times\b/g, "×")
+}
 
 interface TutorChatProps {
   messages: UIMessage[]
-  onSendMessage: (message: string, files?: FileList) => void
+  onSendMessage: (message: string) => void
   isLoading?: boolean
   isThinking?: boolean
   isEnabled?: boolean
@@ -36,56 +40,22 @@ interface TutorChatProps {
 
 export function TutorChat({ messages, onSendMessage, isLoading, isThinking, isEnabled = true }: TutorChatProps) {
   const [input, setInput] = useState("")
-  const [files, setFiles] = useState<FileList | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
-  }, [previewUrl])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files
-    if (!selectedFiles || selectedFiles.length === 0) return
-
-    const file = selectedFiles[0]
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error("That image is too big! Please pick one under 10 MB.")
-      if (fileInputRef.current) fileInputRef.current.value = ""
-      return
-    }
-
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setFiles(selectedFiles)
-    setPreviewUrl(URL.createObjectURL(file))
-  }
-
-  const removeImage = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setFiles(null)
-    setPreviewUrl(null)
-    if (fileInputRef.current) fileInputRef.current.value = ""
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const hasText = !!input.trim()
-    const hasImage = !!files
-    if ((hasText || hasImage) && !isLoading && isEnabled) {
-      onSendMessage(hasText ? input.trim() : "[See attached image]", files ?? undefined)
+    if (hasText && !isLoading && isEnabled) {
+      onSendMessage(input.trim())
       setInput("")
-      removeImage()
     }
   }
 
-  const isDisabled = !isEnabled && messages.length === 0
+  const isDisabled = !isEnabled
 
   return (
     <Card className={`border-2 shadow-lg rounded-3xl overflow-hidden flex flex-col h-full min-h-[500px] lg:min-h-0 transition-all duration-300 ${
@@ -161,45 +131,7 @@ export function TutorChat({ messages, onSendMessage, isLoading, isThinking, isEn
 
         {/* Input Area */}
         <div className={`p-4 border-t-2 flex-shrink-0 ${isDisabled ? "border-border/50 bg-muted/20" : "border-border bg-muted/30"}`}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-            aria-label="Upload follow-up image"
-          />
-          {previewUrl && (
-            <div className="relative inline-block mb-3">
-              <img
-                src={previewUrl}
-                alt="Follow-up image preview"
-                className="rounded-xl border-2 border-border max-w-[120px] max-h-[120px] object-cover"
-              />
-              <button
-                type="button"
-                onClick={removeImage}
-                className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-md hover:scale-110 transition-transform"
-                aria-label="Remove image"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
           <form onSubmit={handleSubmit} className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || isDisabled}
-              className={`h-12 px-3 rounded-xl border-2 transition-colors flex-shrink-0 ${
-                isDisabled
-                  ? "border-border/50 text-muted-foreground/40 cursor-not-allowed"
-                  : "border-border text-muted-foreground hover:border-accent/50 hover:text-accent"
-              }`}
-              aria-label="Attach image"
-            >
-              <Camera className="h-5 w-5" />
-            </button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -213,7 +145,7 @@ export function TutorChat({ messages, onSendMessage, isLoading, isThinking, isEn
             />
             <Button
               type="submit"
-              disabled={(!input.trim() && !files) || isLoading || isDisabled}
+              disabled={!input.trim() || isLoading || isDisabled}
               className={`h-12 px-5 rounded-xl shadow-md transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100 ${
                 isDisabled
                   ? "bg-muted text-muted-foreground cursor-not-allowed"
@@ -233,6 +165,7 @@ export function TutorChat({ messages, onSendMessage, isLoading, isThinking, isEn
 function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boolean }) {
   const isAssistant = message.role === "assistant"
   const text = getMessageText(message)
+  const displayText = isAssistant ? normalizeMathText(text) : text
   const images = isAssistant ? [] : getMessageImages(message)
 
   return (
@@ -268,10 +201,13 @@ function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boole
               const isSafe = img.url.startsWith("data:") || img.url.startsWith("blob:");
               if (!isSafe) return null;
               return (
-                <img
+                <Image
                   key={i}
                   src={img.url}
                   alt="Uploaded homework image"
+                  width={200}
+                  height={200}
+                  unoptimized
                   className="rounded-xl max-w-[200px] max-h-[200px] object-cover"
                 />
               );
@@ -293,10 +229,10 @@ function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boole
                   </a>
                 ),
               }}
-            >{text}</ReactMarkdown>
+            >{displayText}</ReactMarkdown>
           </div>
         ) : (
-          <p className="text-base leading-relaxed whitespace-pre-wrap">{text}</p>
+          <p className="text-base leading-relaxed whitespace-pre-wrap">{displayText}</p>
         )}
       </div>
     </div>

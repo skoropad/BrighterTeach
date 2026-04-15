@@ -38,14 +38,15 @@ describe("HomePage", () => {
     expect(screen.getByText("Tutor Chat")).toBeInTheDocument()
   })
 
-  it("hydrates messages from localStorage via initialMessages", () => {
+  it("hydrates messages from localStorage after mount", async () => {
     const saved: UIMessage[] = [
       { id: "1", role: "user", parts: [{ type: "text", text: "hello" }] },
     ]
     localStorage.setItem("brighterteach-messages", JSON.stringify(saved))
     render(<HomePage />)
-    // messages are passed as initialMessages to useChat — no setMessages call needed
-    expect(setMessages).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(setMessages).toHaveBeenCalledWith(saved)
+    })
   })
 
   it("hydrates session state from localStorage", async () => {
@@ -54,6 +55,16 @@ describe("HomePage", () => {
     render(<HomePage />)
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/ask a follow-up/i)).not.toBeDisabled()
+    })
+  })
+
+  it("restores grade selection from localStorage after mount", async () => {
+    const session = { grade: 5, subject: "reading", mode: "hint", hasSubmitted: true }
+    localStorage.setItem("brighterteach-session", JSON.stringify(session))
+    render(<HomePage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveTextContent("Grade 5")
     })
   })
 

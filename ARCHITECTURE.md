@@ -16,7 +16,7 @@ flowchart TB
   subgraph server [Next.js Server]
     AR["POST /api/chat"] --> BSP["buildSystemPrompt()"]
     BSP --> ST["streamText()"]
-    ST --> GM["Gemini 2.5 Flash"]
+    ST --> GM["OpenAI GPT-4o mini"]
   end
 
   UC -->|"POST with messages, grade, subject, mode"| AR
@@ -81,7 +81,7 @@ On mount, `loadMessages()` and `loadSession()` read from storage with try/catch 
 
 ### API Route: `POST /api/chat`
 
-Single route handler in `app/api/chat/route.ts`. No database. Root `middleware.ts` handles security headers only (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) — it does not touch routing or request bodies.
+Single route handler in `app/api/chat/route.ts`. No database. Root `proxy.ts` handles security headers only (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) — it does not touch routing or request bodies.
 
 **Request body:**
 
@@ -100,7 +100,7 @@ Single route handler in `app/api/chat/route.ts`. No database. Root `middleware.t
 
 1. Parse and validate request body
 2. Call `buildSystemPrompt(grade, subject, mode)` to construct the system message
-3. Call `streamText()` with the Google Gemini model, system prompt, and converted messages
+3. Call `streamText()` with the OpenAI model, system prompt, and converted messages
 4. Return the streaming response via `toUIMessageStreamResponse()`
 
 ### Dynamic System Prompt
@@ -131,6 +131,6 @@ The app uses Vercel AI SDK's streaming pipeline:
 
 **Streaming responses.** Kids lose interest waiting for a loading spinner. Streaming makes the tutor feel alive — words appear as the model "thinks," which keeps attention and makes the interaction feel conversational.
 
-**Gemini 2.5 Flash.** Fast inference (low latency for streaming), strong multimodal capabilities, and cost-effective for an MVP. The speed matters more than raw capability for a homework helper where responses are short and targeted.
+**GPT-4o mini.** Fast inference, strong instruction-following, cost-effective for an MVP, and broadly familiar to developers. The Vercel AI SDK abstraction keeps the provider swap trivial if latency or cost trade-offs shift.
 
 **No external state manager.** With one page and a handful of state values, `useState` + `useChat` is sufficient. Adding Redux or Zustand would be over-engineering for this scope.

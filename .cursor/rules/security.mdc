@@ -26,6 +26,6 @@ alwaysApply: true
 - `localStorage.setItem` calls MUST be wrapped in try/catch to handle `QuotaExceededError`.
 
 ## Infrastructure
-- `middleware.ts` MUST set CSP, `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy` headers.
+- `proxy.ts` MUST set CSP, `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy` headers.
 - `next.config.mjs` MUST NOT set `typescript.ignoreBuildErrors: true`.
 - The app MUST have a React `ErrorBoundary` wrapping page content in the root layout.
