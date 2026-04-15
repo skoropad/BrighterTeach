@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,12 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { BookOpen, Lightbulb, Sparkles, GraduationCap } from "lucide-react"
+import { BookOpen, Lightbulb, Sparkles, GraduationCap, Camera, X } from "lucide-react"
+import { toast } from "sonner"
 import type { Subject } from "@/lib/constants"
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10 MB
+
 interface WorkspaceCardProps {
-  onExplain: (problem: string, grade: string, subject: Subject, context?: string) => void
-  onHint: (problem: string, grade: string, subject: Subject, context?: string) => void
+  onExplain: (problem: string, grade: string, subject: Subject, context?: string, files?: FileList) => void
+  onHint: (problem: string, grade: string, subject: Subject, context?: string, files?: FileList) => void
   isLoading?: boolean
 }
 
@@ -26,27 +29,55 @@ export function WorkspaceCard({ onExplain, onHint, isLoading }: WorkspaceCardPro
   const [mathProblem, setMathProblem] = useState<string>("")
   const [readingContext, setReadingContext] = useState<string>("")
   const [readingQuestion, setReadingQuestion] = useState<string>("")
+  const [files, setFiles] = useState<FileList | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleExplain = () => {
-    if (subject === "math" && mathProblem.trim() && grade) {
-      onExplain(mathProblem, grade, subject)
-    } else if (subject === "reading" && readingQuestion.trim() && grade) {
-      onExplain(readingQuestion, grade, subject, readingContext)
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
+  }, [previewUrl])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files
+    if (!selectedFiles || selectedFiles.length === 0) return
+
+    const file = selectedFiles[0]
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error("That image is too big! Please pick one under 10 MB.")
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setFiles(selectedFiles)
+    setPreviewUrl(URL.createObjectURL(file))
   }
 
-  const handleHint = () => {
-    if (subject === "math" && mathProblem.trim() && grade) {
-      onHint(mathProblem, grade, subject)
-    } else if (subject === "reading" && readingQuestion.trim() && grade) {
-      onHint(readingQuestion, grade, subject, readingContext)
+  const removeImage = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setFiles(null)
+    setPreviewUrl(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const hasText = subject === "math" ? !!mathProblem.trim() : !!readingQuestion.trim()
+  const hasImage = !!files
+
+  const handleSubmit = (callback: WorkspaceCardProps["onExplain"] | WorkspaceCardProps["onHint"]) => {
+    if (!grade || (!hasText && !hasImage)) return
+    if (subject === "math") {
+      callback(mathProblem, grade, subject, undefined, files ?? undefined)
+    } else {
+      callback(readingQuestion, grade, subject, readingContext, files ?? undefined)
     }
+    removeImage()
   }
 
   const isSubmitDisabled = () => {
     if (!grade || isLoading) return true
-    if (subject === "math") return !mathProblem.trim()
-    return !readingQuestion.trim()
+    return !hasText && !hasImage
   }
 
   return (
@@ -147,10 +178,48 @@ export function WorkspaceCard({ onExplain, onHint, isLoading }: WorkspaceCardPro
           )}
         </div>
 
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+            aria-label="Upload homework image"
+          />
+          {previewUrl ? (
+            <div className="relative inline-block">
+              <img
+                src={previewUrl}
+                alt="Homework preview"
+                className="rounded-2xl border-2 border-border max-w-[200px] max-h-[200px] object-cover"
+              />
+              <button
+                type="button"
+                onClick={removeImage}
+                className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-md hover:scale-110 transition-transform"
+                aria-label="Remove image"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-border text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+            >
+              <Camera className="h-5 w-5" />
+              <span className="text-base font-medium">Add a photo of your homework</span>
+            </button>
+          )}
+        </div>
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 pt-2">
           <Button
-            onClick={handleExplain}
+            onClick={() => handleSubmit(onExplain)}
             disabled={isSubmitDisabled()}
             className="flex-1 h-14 text-lg font-bold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
@@ -158,7 +227,7 @@ export function WorkspaceCard({ onExplain, onHint, isLoading }: WorkspaceCardPro
             Explain Step-by-Step
           </Button>
           <Button
-            onClick={handleHint}
+            onClick={() => handleSubmit(onHint)}
             disabled={isSubmitDisabled()}
             variant="secondary"
             className="flex-1 h-14 text-lg font-bold rounded-2xl bg-secondary hover:bg-secondary/80 text-secondary-foreground shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"

@@ -71,5 +71,11 @@ describe("POST /api/chat", () => {
       expect(res.status).toBe(503)
       expect(await res.text()).toBe("AI service unavailable")
     })
+
+    it("accepts hasImage flag without validation error", async () => {
+      const res = await POST(makeRequest({ ...validBody, hasImage: true }))
+      // Still 503 because streamText mock throws, but not 400
+      expect(res.status).toBe(503)
+    })
   })
 })

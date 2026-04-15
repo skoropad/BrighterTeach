@@ -84,21 +84,27 @@ export default function HomePage() {
   }, [session])
 
   const handleSubmit = useCallback(
-    (problem: string, grade: string, subject: Subject, mode: Mode, context?: string) => {
+    (problem: string, grade: string, subject: Subject, mode: Mode, context?: string, files?: FileList) => {
       const gradeNum = parseInt(grade)
+      const hasImage = !!files && files.length > 0
       const newSession: Session = { grade: gradeNum, subject, mode, hasSubmitted: true }
       setSession(newSession)
 
-      const text =
-        mode === "hint"
+      const hasText = !!problem.trim()
+      const text = hasText
+        ? mode === "hint"
           ? subject === "reading" && context
             ? `${HINT_PREFIX}\n\nText: "${context}"\n\nQuestion: ${problem}`
             : `${HINT_PREFIX} ${problem}`
           : subject === "reading" && context
             ? `[Reading Question]\n\nText: "${context}"\n\nQuestion: ${problem}`
             : `[${subject === "math" ? "Math" : "Reading"} Question]\n\n${problem}`
+        : "[See attached image]"
 
-      sendMessage({ text }, { body: { grade: gradeNum, subject, mode } })
+      sendMessage(
+        { text, files },
+        { body: { grade: gradeNum, subject, mode, hasImage } }
+      )
     },
     [sendMessage]
   )
@@ -131,8 +137,8 @@ export default function HomePage() {
             <div className="lg:h-full lg:overflow-auto">
               <WorkspaceCard
                 key={resetKey}
-                onExplain={(p, g, s, c) => handleSubmit(p, g, s, "explain", c)}
-                onHint={(p, g, s, c) => handleSubmit(p, g, s, "hint", c)}
+                onExplain={(p, g, s, c, f) => handleSubmit(p, g, s, "explain", c, f)}
+                onHint={(p, g, s, c, f) => handleSubmit(p, g, s, "hint", c, f)}
                 isLoading={isLoading}
               />
             </div>

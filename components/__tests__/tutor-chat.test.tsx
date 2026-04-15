@@ -72,6 +72,38 @@ describe("TutorChat", () => {
       render(<TutorChat {...defaultProps} messages={messages} />)
       expect(screen.queryByText("Hint")).not.toBeInTheDocument()
     })
+
+    it("renders an image when user message has a file part", () => {
+      const messages: UIMessage[] = [
+        {
+          id: "img-msg",
+          role: "user",
+          parts: [
+            { type: "file", mediaType: "image/png", url: "data:image/png;base64,abc123" } as never,
+            { type: "text", text: "Help with this" },
+          ],
+        },
+      ]
+      render(<TutorChat {...defaultProps} messages={messages} />)
+      const img = screen.getByAltText("Uploaded homework image")
+      expect(img).toBeInTheDocument()
+      expect(img).toHaveAttribute("src", "data:image/png;base64,abc123")
+    })
+
+    it("does not render images for assistant messages", () => {
+      const messages: UIMessage[] = [
+        {
+          id: "assistant-msg",
+          role: "assistant",
+          parts: [
+            { type: "file", mediaType: "image/png", url: "data:image/png;base64,xyz" } as never,
+            { type: "text", text: "Here is help" },
+          ],
+        },
+      ]
+      render(<TutorChat {...defaultProps} messages={messages} />)
+      expect(screen.queryByAltText("Uploaded homework image")).not.toBeInTheDocument()
+    })
   })
 
   describe("thinking indicator", () => {

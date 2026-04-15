@@ -10,11 +10,12 @@ const VALID_MODES = ["explain", "hint"] as const;
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { messages, grade, subject, mode } = body as {
+  const { messages, grade, subject, mode, hasImage } = body as {
     messages: UIMessage[];
     grade: number;
     subject: Subject;
     mode: Mode;
+    hasImage?: boolean;
   };
 
   if (
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const systemPrompt = buildSystemPrompt(grade, subject, mode);
+    const systemPrompt = buildSystemPrompt(grade, subject, mode, hasImage);
 
     const result = streamText({
       model: google("gemini-2.5-flash"),

@@ -46,4 +46,20 @@ describe("buildSystemPrompt", () => {
     expect(g4).toMatch(/young children/i)
     expect(g5).toMatch(/middle-school students/i)
   })
+
+  it("includes image instruction when hasImage is true", () => {
+    const prompt = buildSystemPrompt(3, "math", "explain", true)
+    expect(prompt).toMatch(/shared an image/i)
+    expect(prompt).toMatch(/examine the image/i)
+  })
+
+  it("does not include image instruction when hasImage is false", () => {
+    const prompt = buildSystemPrompt(3, "math", "explain", false)
+    expect(prompt).not.toMatch(/shared an image/i)
+  })
+
+  it("does not include image instruction when hasImage is omitted", () => {
+    const prompt = buildSystemPrompt(3, "math", "explain")
+    expect(prompt).not.toMatch(/shared an image/i)
+  })
 })

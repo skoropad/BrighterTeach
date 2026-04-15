@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import type { UIMessage } from "ai"
 import ReactMarkdown from "react-markdown"
+import rehypeSanitize from "rehype-sanitize"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +15,12 @@ function getMessageText(message: UIMessage): string {
     .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
     .map((p) => p.text)
     .join("")
+}
+
+function getMessageImages(message: UIMessage): Array<{ url: string }> {
+  return message.parts.filter(
+    (p): p is Extract<typeof p, { type: "file" }> => p.type === "file"
+  )
 }
 
 interface TutorChatProps {
@@ -150,6 +157,7 @@ export function TutorChat({ messages, onSendMessage, isLoading, isThinking, isEn
 function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boolean }) {
   const isAssistant = message.role === "assistant"
   const text = getMessageText(message)
+  const images = isAssistant ? [] : getMessageImages(message)
 
   return (
     <div className={`flex items-start gap-3 ${!isAssistant ? "flex-row-reverse" : ""}`}>
@@ -177,6 +185,18 @@ function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boole
           <span className="inline-block px-2 py-1 mb-2 text-xs font-bold uppercase tracking-wide bg-secondary text-secondary-foreground rounded-lg">
             Hint
           </span>
+        )}
+        {images.length > 0 && (
+          <div className="mb-2">
+            {images.map((img, i) => (
+              <img
+                key={i}
+                src={img.url}
+                alt="Uploaded homework image"
+                className="rounded-xl max-w-[200px] max-h-[200px] object-cover"
+              />
+            ))}
+          </div>
         )}
         {isAssistant ? (
           <div className="prose prose-sm max-w-none text-foreground prose-p:leading-relaxed prose-p:my-1 prose-ol:my-1 prose-ul:my-1 prose-li:my-0.5 prose-headings:text-foreground prose-strong:text-foreground">

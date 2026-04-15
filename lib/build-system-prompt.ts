@@ -3,7 +3,8 @@ import type { Subject, Mode } from "@/lib/constants"
 export function buildSystemPrompt(
   grade: number,
   subject: Subject,
-  mode: Mode
+  mode: Mode,
+  hasImage?: boolean
 ): string {
   const isYoung = grade <= 4;
 
@@ -35,5 +36,9 @@ The student must do the thinking themselves.`;
     ? "Keep your response under 150 words. Prefer natural sentences over numbered lists."
     : "Keep your response under 200 words. Use numbered steps only when listing multiple items; prefer natural sentences otherwise.";
 
-  return `${tonePart}\n\n${subjectPart}\n\nThe student is in grade ${grade}.\n\n${modePart}\n\n${lengthRule}`;
+  const imagePart = hasImage
+    ? "\n\nThe student has shared an image of their homework. Examine the image carefully and respond to their question about it. If no text question is provided, describe what you see and ask how you can help."
+    : "";
+
+  return `${tonePart}\n\n${subjectPart}\n\nThe student is in grade ${grade}.\n\n${modePart}\n\n${lengthRule}${imagePart}`;
 }
