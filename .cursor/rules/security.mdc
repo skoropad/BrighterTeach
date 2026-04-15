@@ -1,0 +1,31 @@
+---
+description: Security practices for the BrighterTeach MVP
+alwaysApply: true
+---
+# Security Rules
+
+## API Route (`app/api/chat/route.ts`)
+- Every request MUST pass through the rate limiter (`lib/rate-limit.ts`) before any processing.
+- Validate message count (`<= 50`) and individual text length (`<= 10,000` chars). Reject with 400.
+- Derive `hasImage` server-side from message parts. Never trust client-supplied flags for prompt construction.
+- Always set `maxOutputTokens` on `streamText` to cap cost per response.
+- Never expose the API key via `NEXT_PUBLIC_` env vars. The key must stay server-side only.
+
+## Prompt Injection Defence (`lib/build-system-prompt.ts`)
+- The system prompt MUST end with an anti-jailbreak refusal clause (the `antiJailbreak` block).
+- Hint-mode refusal must explicitly list common override phrases ("ignore previous instructions", "system:", "you are now", "the teacher said").
+- Never remove or weaken the `FINAL INSTRUCTION` block without a replacement guardrail.
+
+## Rendering AI Output (`components/tutor-chat.tsx`)
+- `ReactMarkdown` MUST include `rehypeSanitize` in `rehypePlugins`.
+- Links MUST be filtered: reject any `href` starting with `javascript:`.
+- Image `src` attributes MUST be validated to start with `data:` or `blob:` before rendering.
+
+## State & Storage (`app/page.tsx`)
+- All data restored from `localStorage` MUST be validated with Zod schemas before use.
+- `localStorage.setItem` calls MUST be wrapped in try/catch to handle `QuotaExceededError`.
+
+## Infrastructure
+- `middleware.ts` MUST set CSP, `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy` headers.
+- `next.config.mjs` MUST NOT set `typescript.ignoreBuildErrors: true`.
+- The app MUST have a React `ErrorBoundary` wrapping page content in the root layout.
