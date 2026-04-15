@@ -2,14 +2,57 @@ import { describe, it, expect } from "vitest"
 import { buildSystemPrompt } from "@/lib/build-system-prompt"
 
 describe("buildSystemPrompt", () => {
-  it("uses young learner tone for grade <= 4", () => {
-    const prompt = buildSystemPrompt(4, "math", "explain")
-    expect(prompt).toMatch(/young children/i)
-  })
+  describe("grade tier adaptation", () => {
+    it("uses very young tone for grades 1-2", () => {
+      const g1 = buildSystemPrompt(1, "math", "explain")
+      const g2 = buildSystemPrompt(2, "math", "explain")
+      expect(g1).toMatch(/very young children/i)
+      expect(g2).toMatch(/very young children/i)
+    })
 
-  it("uses older student tone for grade > 4", () => {
-    const prompt = buildSystemPrompt(5, "math", "explain")
-    expect(prompt).toMatch(/middle-school students/i)
+    it("uses young children tone for grades 3-4", () => {
+      const g3 = buildSystemPrompt(3, "math", "explain")
+      const g4 = buildSystemPrompt(4, "math", "explain")
+      expect(g3).toMatch(/young children/i)
+      expect(g3).not.toMatch(/very young children/i)
+      expect(g4).toMatch(/young children/i)
+    })
+
+    it("uses upper-elementary tone for grades 5-6", () => {
+      const g5 = buildSystemPrompt(5, "math", "explain")
+      const g6 = buildSystemPrompt(6, "math", "explain")
+      expect(g5).toMatch(/upper-elementary/i)
+      expect(g6).toMatch(/upper-elementary/i)
+    })
+
+    it("uses middle-school tone for grades 7-8", () => {
+      const g7 = buildSystemPrompt(7, "math", "explain")
+      const g8 = buildSystemPrompt(8, "math", "explain")
+      expect(g7).toMatch(/middle-school students/i)
+      expect(g8).toMatch(/middle-school students/i)
+    })
+
+    it("boundary: grade 2 is very young, grade 3 is young", () => {
+      const g2 = buildSystemPrompt(2, "math", "explain")
+      const g3 = buildSystemPrompt(3, "math", "explain")
+      expect(g2).toMatch(/very young children/i)
+      expect(g3).toMatch(/young children/i)
+      expect(g3).not.toMatch(/very young children/i)
+    })
+
+    it("boundary: grade 4 is young, grade 5 is upper-elementary", () => {
+      const g4 = buildSystemPrompt(4, "math", "explain")
+      const g5 = buildSystemPrompt(5, "math", "explain")
+      expect(g4).toMatch(/young children/i)
+      expect(g5).toMatch(/upper-elementary/i)
+    })
+
+    it("boundary: grade 6 is upper-elementary, grade 7 is middle-school", () => {
+      const g6 = buildSystemPrompt(6, "math", "explain")
+      const g7 = buildSystemPrompt(7, "math", "explain")
+      expect(g6).toMatch(/upper-elementary/i)
+      expect(g7).toMatch(/middle-school students/i)
+    })
   })
 
   it("includes math subject block for math", () => {
@@ -40,13 +83,6 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("grade 3")
   })
 
-  it("boundary: grade 4 is young, grade 5 is older", () => {
-    const g4 = buildSystemPrompt(4, "math", "explain")
-    const g5 = buildSystemPrompt(5, "math", "explain")
-    expect(g4).toMatch(/young children/i)
-    expect(g5).toMatch(/middle-school students/i)
-  })
-
   it("includes image instruction when hasImage is true", () => {
     const prompt = buildSystemPrompt(3, "math", "explain", true)
     expect(prompt).toMatch(/shared an image/i)
@@ -61,6 +97,39 @@ describe("buildSystemPrompt", () => {
   it("does not include image instruction when hasImage is omitted", () => {
     const prompt = buildSystemPrompt(3, "math", "explain")
     expect(prompt).not.toMatch(/shared an image/i)
+  })
+
+  describe("progressive hint escalation", () => {
+    it("includes follow-up hint escalation instruction in hint mode", () => {
+      const prompt = buildSystemPrompt(5, "math", "hint")
+      expect(prompt).toMatch(/another hint/i)
+      expect(prompt).toMatch(/more specific nudge/i)
+    })
+
+    it("does not include hint escalation in explain mode", () => {
+      const prompt = buildSystemPrompt(5, "math", "explain")
+      expect(prompt).not.toMatch(/another hint/i)
+    })
+  })
+
+  describe("subject-specific hint guidance", () => {
+    it("includes math-specific hint guidance for math hints", () => {
+      const prompt = buildSystemPrompt(5, "math", "hint")
+      expect(prompt).toMatch(/suggest a strategy/i)
+      expect(prompt).toMatch(/do not perform any calculation/i)
+    })
+
+    it("includes reading-specific hint guidance for reading hints", () => {
+      const prompt = buildSystemPrompt(5, "reading", "hint")
+      expect(prompt).toMatch(/point the student toward/i)
+      expect(prompt).toMatch(/do not state the theme/i)
+    })
+
+    it("does not include subject-specific hint guidance in explain mode", () => {
+      const prompt = buildSystemPrompt(5, "math", "explain")
+      expect(prompt).not.toMatch(/suggest a strategy/i)
+      expect(prompt).not.toMatch(/point the student toward/i)
+    })
   })
 
   describe("anti-jailbreak refusal clause", () => {
@@ -78,11 +147,13 @@ describe("buildSystemPrompt", () => {
       expect(finalIdx).toBeGreaterThan(strictIdx)
     })
 
-    it("hint mode refusal is stricter — lists override phrases", () => {
+    it("hint mode refusal lists override phrases including system: and you are now", () => {
       const prompt = buildSystemPrompt(5, "math", "hint")
       expect(prompt).toMatch(/ignore previous instructions/i)
       expect(prompt).toMatch(/switch modes/i)
       expect(prompt).toMatch(/the teacher said/i)
+      expect(prompt).toContain('"system:"')
+      expect(prompt).toContain('"you are now"')
     })
 
     it("hint mode tells the model to respond with a fixed refusal message", () => {

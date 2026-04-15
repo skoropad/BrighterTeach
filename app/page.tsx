@@ -135,9 +135,9 @@ export default function HomePage() {
   )
 
   const handleSendMessage = useCallback(
-    (message: string) => {
+    (message: string, files?: FileList) => {
       sendMessage(
-        { text: message },
+        { text: message, files },
         { body: { grade: session.grade, subject: session.subject, mode: session.mode } }
       )
     },
@@ -165,6 +165,8 @@ export default function HomePage() {
                 onExplain={(p, g, s, c, f) => handleSubmit(p, g, s, "explain", c, f)}
                 onHint={(p, g, s, c, f) => handleSubmit(p, g, s, "hint", c, f)}
                 isLoading={isLoading}
+                initialGrade={session.hasSubmitted ? session.grade.toString() : ""}
+                initialSubject={session.hasSubmitted ? session.subject : "math"}
               />
             </div>
             <div className="lg:h-full">

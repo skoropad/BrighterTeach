@@ -21,11 +21,13 @@ interface WorkspaceCardProps {
   onExplain: (problem: string, grade: string, subject: Subject, context?: string, files?: FileList) => void
   onHint: (problem: string, grade: string, subject: Subject, context?: string, files?: FileList) => void
   isLoading?: boolean
+  initialGrade?: string
+  initialSubject?: Subject
 }
 
-export function WorkspaceCard({ onExplain, onHint, isLoading }: WorkspaceCardProps) {
-  const [grade, setGrade] = useState<string>("")
-  const [subject, setSubject] = useState<Subject>("math")
+export function WorkspaceCard({ onExplain, onHint, isLoading, initialGrade, initialSubject }: WorkspaceCardProps) {
+  const [grade, setGrade] = useState<string>(initialGrade ?? "")
+  const [subject, setSubject] = useState<Subject>(initialSubject ?? "math")
   const [mathProblem, setMathProblem] = useState<string>("")
   const [readingContext, setReadingContext] = useState<string>("")
   const [readingQuestion, setReadingQuestion] = useState<string>("")

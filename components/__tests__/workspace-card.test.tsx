@@ -31,6 +31,18 @@ describe("WorkspaceCard", () => {
     expect(screen.getByText("Workspace")).toBeInTheDocument()
   })
 
+  describe("session restoration", () => {
+    it("pre-selects grade from initialGrade prop", () => {
+      render(<WorkspaceCard {...defaultProps} initialGrade="5" />)
+      expect(screen.getByRole("combobox")).toHaveTextContent("Grade 5")
+    })
+
+    it("pre-selects subject from initialSubject prop", () => {
+      render(<WorkspaceCard {...defaultProps} initialSubject="reading" />)
+      expect(screen.getByText("Reading")).toHaveClass("bg-accent")
+    })
+  })
+
   it("disables buttons when no grade is selected", () => {
     render(<WorkspaceCard {...defaultProps} />)
     expect(screen.getByRole("button", { name: /explain step-by-step/i })).toBeDisabled()
