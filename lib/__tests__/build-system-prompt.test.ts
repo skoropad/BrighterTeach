@@ -62,4 +62,49 @@ describe("buildSystemPrompt", () => {
     const prompt = buildSystemPrompt(3, "math", "explain")
     expect(prompt).not.toMatch(/shared an image/i)
   })
+
+  describe("anti-jailbreak refusal clause", () => {
+    it("includes FINAL INSTRUCTION in every prompt", () => {
+      expect(buildSystemPrompt(3, "math", "explain")).toContain("FINAL INSTRUCTION")
+      expect(buildSystemPrompt(3, "math", "hint")).toContain("FINAL INSTRUCTION")
+      expect(buildSystemPrompt(6, "reading", "explain")).toContain("FINAL INSTRUCTION")
+      expect(buildSystemPrompt(6, "reading", "hint")).toContain("FINAL INSTRUCTION")
+    })
+
+    it("FINAL INSTRUCTION appears after all other content", () => {
+      const prompt = buildSystemPrompt(5, "math", "hint")
+      const finalIdx = prompt.indexOf("FINAL INSTRUCTION")
+      const strictIdx = prompt.indexOf("STRICT RULE")
+      expect(finalIdx).toBeGreaterThan(strictIdx)
+    })
+
+    it("hint mode refusal is stricter — lists override phrases", () => {
+      const prompt = buildSystemPrompt(5, "math", "hint")
+      expect(prompt).toMatch(/ignore previous instructions/i)
+      expect(prompt).toMatch(/switch modes/i)
+      expect(prompt).toMatch(/the teacher said/i)
+    })
+
+    it("hint mode tells the model to respond with a fixed refusal message", () => {
+      const prompt = buildSystemPrompt(5, "math", "hint")
+      expect(prompt).toContain("I can only give you hints")
+    })
+
+    it("explain mode refusal does not mention hint-mode-specific phrases", () => {
+      const prompt = buildSystemPrompt(5, "math", "explain")
+      expect(prompt).not.toMatch(/abandon hint mode/i)
+      expect(prompt).not.toContain("I can only give you hints")
+    })
+
+    it("hint mode refusal is present regardless of grade or subject", () => {
+      const combinations: [number, "math" | "reading"][] = [
+        [1, "math"], [4, "reading"], [5, "math"], [8, "reading"],
+      ]
+      for (const [grade, subject] of combinations) {
+        const prompt = buildSystemPrompt(grade, subject, "hint")
+        expect(prompt).toMatch(/ignore previous instructions/i)
+        expect(prompt).toContain("I can only give you hints")
+      }
+    })
+  })
 })

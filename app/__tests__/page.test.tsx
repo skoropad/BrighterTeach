@@ -9,8 +9,8 @@ let mockStatus: "ready" | "submitted" | "streaming" = "ready"
 let mockMessages: UIMessage[] = []
 
 vi.mock("@ai-sdk/react", () => ({
-  useChat: (opts?: { initialMessages?: UIMessage[] }) => ({
-    messages: opts?.initialMessages?.length ? opts.initialMessages : mockMessages,
+  useChat: (opts?: { messages?: UIMessage[] }) => ({
+    messages: opts?.messages?.length ? opts.messages : mockMessages,
     sendMessage,
     setMessages,
     status: mockStatus,
@@ -73,7 +73,7 @@ describe("HomePage", () => {
 
     expect(sendMessage).toHaveBeenCalledWith(
       { text: expect.stringContaining("2+2"), files: undefined },
-      { body: { grade: 3, subject: "math", mode: "explain", hasImage: false } }
+      { body: { grade: 3, subject: "math", mode: "explain" } }
     )
   })
 
@@ -93,7 +93,7 @@ describe("HomePage", () => {
 
     expect(sendMessage).toHaveBeenCalledWith(
       { text: expect.stringContaining("🔍 Hint Request:"), files: undefined },
-      { body: { grade: 5, subject: "math", mode: "hint", hasImage: false } }
+      { body: { grade: 5, subject: "math", mode: "hint" } }
     )
   })
 

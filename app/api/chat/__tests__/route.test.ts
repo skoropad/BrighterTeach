@@ -25,7 +25,9 @@ function makeRequest(body: Record<string, unknown>): Request {
 }
 
 const validBody = {
-  messages: [],
+  messages: [
+    { id: "1", role: "user", parts: [{ type: "text", text: "What is 2+2?" }] },
+  ],
   grade: 3,
   subject: "math",
   mode: "explain",
@@ -65,6 +67,25 @@ describe("POST /api/chat", () => {
     })
   })
 
+  describe("message limits", () => {
+    it("rejects empty messages array", async () => {
+      const res = await POST(makeRequest({ ...validBody, messages: [] }))
+      expect(res.status).toBe(400)
+    })
+
+    it("rejects oversized message text", async () => {
+      const longText = "a".repeat(10_001)
+      const res = await POST(
+        makeRequest({
+          ...validBody,
+          messages: [{ id: "1", role: "user", parts: [{ type: "text", text: longText }] }],
+        })
+      )
+      expect(res.status).toBe(400)
+      expect(await res.text()).toBe("Message too long")
+    })
+  })
+
   describe("error handling", () => {
     it("returns 503 when AI service fails", async () => {
       const res = await POST(makeRequest(validBody))
@@ -72,9 +93,8 @@ describe("POST /api/chat", () => {
       expect(await res.text()).toBe("AI service unavailable")
     })
 
-    it("accepts hasImage flag without validation error", async () => {
-      const res = await POST(makeRequest({ ...validBody, hasImage: true }))
-      // Still 503 because streamText mock throws, but not 400
+    it("ignores extra body fields without validation error", async () => {
+      const res = await POST(makeRequest({ ...validBody, hasImage: true, extra: "field" }))
       expect(res.status).toBe(503)
     })
   })

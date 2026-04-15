@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Nunito } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
+import { ErrorBoundary } from '@/components/error-boundary'
 import './globals.css'
 
 const nunito = Nunito({ 
@@ -41,7 +42,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <body className={`${nunito.variable} font-sans antialiased min-h-screen`}>
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
         <Toaster position="top-center" richColors />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import type { UIMessage } from "ai"
+import { z } from "zod"
 import { Header } from "@/components/header"
 import { WorkspaceCard } from "@/components/workspace-card"
 import { TutorChat } from "@/components/tutor-chat"
@@ -23,17 +24,32 @@ const DEFAULT_SESSION: Session = {
   hasSubmitted: false,
 }
 
+const sessionSchema = z.object({
+  grade: z.number().int().min(0).max(8),
+  subject: z.enum(["math", "reading"]),
+  mode: z.enum(["explain", "hint"]),
+  hasSubmitted: z.boolean(),
+})
+
+const messagePartSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("text"), text: z.string() }),
+  z.object({ type: z.literal("file"), url: z.string(), mediaType: z.string() }),
+])
+
+const messageSchema = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant", "system"]),
+  parts: z.array(messagePartSchema).min(1),
+})
+
+const messagesSchema = z.array(messageSchema)
+
 function loadSession(): Session {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.session)
     if (!raw) return DEFAULT_SESSION
-    const parsed = JSON.parse(raw)
-    return {
-      grade: parsed.grade ?? 0,
-      subject: parsed.subject ?? "math",
-      mode: parsed.mode ?? "explain",
-      hasSubmitted: parsed.hasSubmitted ?? false,
-    }
+    const parsed = sessionSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? parsed.data : DEFAULT_SESSION
   } catch {
     return DEFAULT_SESSION
   }
@@ -43,10 +59,20 @@ function loadMessages(): UIMessage[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.messages)
     if (!raw) return []
-    const parsed = JSON.parse(raw) as UIMessage[]
-    return parsed.length > 0 ? parsed : []
+    const parsed = messagesSchema.safeParse(JSON.parse(raw))
+    return parsed.success && parsed.data.length > 0
+      ? (parsed.data as UIMessage[])
+      : []
   } catch {
     return []
+  }
+}
+
+function safeSetItem(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    toast.error("Storage is full. Consider clearing your chat history.")
   }
 }
 
@@ -58,7 +84,7 @@ export default function HomePage() {
   const [resetKey, setResetKey] = useState(0)
 
   const { messages, sendMessage, setMessages, status } = useChat({
-    initialMessages,
+    messages: initialMessages,
     onError: () => {
       toast.error("Oops! Something went wrong. Please try again.")
     },
@@ -69,7 +95,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(messages))
+      safeSetItem(STORAGE_KEYS.messages, JSON.stringify(messages))
     } else {
       localStorage.removeItem(STORAGE_KEYS.messages)
     }
@@ -77,7 +103,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (session.hasSubmitted) {
-      localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session))
+      safeSetItem(STORAGE_KEYS.session, JSON.stringify(session))
     } else {
       localStorage.removeItem(STORAGE_KEYS.session)
     }
@@ -86,7 +112,6 @@ export default function HomePage() {
   const handleSubmit = useCallback(
     (problem: string, grade: string, subject: Subject, mode: Mode, context?: string, files?: FileList) => {
       const gradeNum = parseInt(grade)
-      const hasImage = !!files && files.length > 0
       const newSession: Session = { grade: gradeNum, subject, mode, hasSubmitted: true }
       setSession(newSession)
 
@@ -103,7 +128,7 @@ export default function HomePage() {
 
       sendMessage(
         { text, files },
-        { body: { grade: gradeNum, subject, mode, hasImage } }
+        { body: { grade: gradeNum, subject, mode } }
       )
     },
     [sendMessage]

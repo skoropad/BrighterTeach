@@ -188,19 +188,36 @@ function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boole
         )}
         {images.length > 0 && (
           <div className="mb-2">
-            {images.map((img, i) => (
-              <img
-                key={i}
-                src={img.url}
-                alt="Uploaded homework image"
-                className="rounded-xl max-w-[200px] max-h-[200px] object-cover"
-              />
-            ))}
+            {images.map((img, i) => {
+              const isSafe = img.url.startsWith("data:") || img.url.startsWith("blob:");
+              if (!isSafe) return null;
+              return (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt="Uploaded homework image"
+                  className="rounded-xl max-w-[200px] max-h-[200px] object-cover"
+                />
+              );
+            })}
           </div>
         )}
         {isAssistant ? (
           <div className="prose prose-sm max-w-none text-foreground prose-p:leading-relaxed prose-p:my-1 prose-ol:my-1 prose-ul:my-1 prose-li:my-0.5 prose-headings:text-foreground prose-strong:text-foreground">
-            <ReactMarkdown>{text}</ReactMarkdown>
+            <ReactMarkdown
+              rehypePlugins={[rehypeSanitize]}
+              components={{
+                a: ({ href, children }) => (
+                  <a
+                    href={href && !href.startsWith("javascript:") ? href : "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >{text}</ReactMarkdown>
           </div>
         ) : (
           <p className="text-base leading-relaxed whitespace-pre-wrap">{text}</p>
