@@ -1,0 +1,14 @@
+---
+description: Testing conventions for Vitest + RTL test files
+globs: ["**/*.test.ts", "**/*.test.tsx", "test/**"]
+alwaysApply: false
+---
+# Testing Conventions
+- Use Vitest (`import { describe, it, expect, vi } from "vitest"`). Do NOT use Jest APIs.
+- Use `@testing-library/react` (`render`, `screen`) and `@testing-library/user-event` for component tests.
+- Place test files in `__tests__/` sibling directories (e.g. `components/__tests__/header.test.tsx`).
+- Never use a real AI API key. Mock `@ai-sdk/google` and `@ai-sdk/react` with `vi.mock`.
+- Mock `react-markdown` with a passthrough `<p>` in component tests that render markdown.
+- Mock `sonner` (`toast`) in page-level tests.
+- Run `npm test` after writing or modifying tests to verify they pass.
+- See `TESTING_STRATEGY.md` for full strategy and mocking patterns.
