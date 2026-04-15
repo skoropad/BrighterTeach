@@ -1,0 +1,11 @@
+---
+description: Rules for the AI Chat API route
+globs: ["app/api/chat/route.ts"]
+alwaysApply: false
+---
+# AI API Route Standards
+- Use the Vercel AI SDK (`@ai-sdk/anthropic`) and `streamText`.
+- The model is up to debate.
+- The request body will contain `messages`, `grade` (number 1-8), `subject` (string: "math" or "reading"), and `mode` (string: "explain" or "hint").
+- The system prompt MUST be dynamically constructed based on the `grade`, `subject`, and `mode`. Never hardcode a static system prompt.
+
