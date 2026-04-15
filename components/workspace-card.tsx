@@ -12,8 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { BookOpen, Lightbulb, Sparkles, GraduationCap } from "lucide-react"
-
-type Subject = "math" | "reading"
+import type { Subject } from "@/lib/constants"
 
 interface WorkspaceCardProps {
   onExplain: (problem: string, grade: string, subject: Subject, context?: string) => void

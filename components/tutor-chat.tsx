@@ -1,29 +1,32 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import type { UIMessage } from "ai"
+import ReactMarkdown from "react-markdown"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MessageCircle, Send, Bot, User, Loader2 } from "lucide-react"
+import { HINT_PREFIX } from "@/lib/constants"
 
-export interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  isHint?: boolean
+function getMessageText(message: UIMessage): string {
+  return message.parts
+    .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+    .map((p) => p.text)
+    .join("")
 }
 
 interface TutorChatProps {
-  messages: Message[]
+  messages: UIMessage[]
   onSendMessage: (message: string) => void
   isLoading?: boolean
+  isThinking?: boolean
   isEnabled?: boolean
 }
 
-export function TutorChat({ messages, onSendMessage, isLoading, isEnabled = true }: TutorChatProps) {
+export function TutorChat({ messages, onSendMessage, isLoading, isThinking, isEnabled = true }: TutorChatProps) {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -85,11 +88,16 @@ export function TutorChat({ messages, onSendMessage, isLoading, isEnabled = true
                 )}
               </div>
             ) : (
-              messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))
+              messages.map((message, index) => {
+                const isHint =
+                  message.role === "assistant" &&
+                  index > 0 &&
+                  messages[index - 1].role === "user" &&
+                  getMessageText(messages[index - 1]).startsWith(HINT_PREFIX)
+                return <MessageBubble key={message.id} message={message} isHint={isHint} />
+              })
             )}
-            {isLoading && (
+            {isThinking && (
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-accent rounded-xl flex-shrink-0">
                   <Bot className="h-5 w-5 text-accent-foreground" />
@@ -110,14 +118,13 @@ export function TutorChat({ messages, onSendMessage, isLoading, isEnabled = true
         <div className={`p-4 border-t-2 flex-shrink-0 ${isDisabled ? "border-border/50 bg-muted/20" : "border-border bg-muted/30"}`}>
           <form onSubmit={handleSubmit} className="flex gap-3">
             <Input
-              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={isDisabled ? "Submit a question first..." : "Ask a follow-up question..."}
               disabled={isLoading || isDisabled}
               className={`flex-1 h-12 text-base rounded-xl border-2 transition-colors placeholder:text-muted-foreground/60 ${
-                isDisabled 
-                  ? "border-border/50 bg-muted/30 cursor-not-allowed" 
+                isDisabled
+                  ? "border-border/50 bg-muted/30 cursor-not-allowed"
                   : "border-border bg-card hover:border-accent/50 focus:border-accent"
               }`}
             />
@@ -140,37 +147,44 @@ export function TutorChat({ messages, onSendMessage, isLoading, isEnabled = true
   )
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, isHint }: { message: UIMessage; isHint?: boolean }) {
   const isAssistant = message.role === "assistant"
+  const text = getMessageText(message)
 
   return (
     <div className={`flex items-start gap-3 ${!isAssistant ? "flex-row-reverse" : ""}`}>
       <div className={`p-2 rounded-xl flex-shrink-0 ${
-        isAssistant 
-          ? message.isHint 
-            ? "bg-secondary" 
-            : "bg-accent" 
+        isAssistant
+          ? isHint
+            ? "bg-secondary"
+            : "bg-accent"
           : "bg-primary"
       }`}>
         {isAssistant ? (
-          <Bot className={`h-5 w-5 ${message.isHint ? "text-secondary-foreground" : "text-accent-foreground"}`} />
+          <Bot className={`h-5 w-5 ${isHint ? "text-secondary-foreground" : "text-accent-foreground"}`} />
         ) : (
           <User className="h-5 w-5 text-primary-foreground" />
         )}
       </div>
       <div className={`rounded-2xl p-4 max-w-[85%] ${
-        isAssistant 
-          ? message.isHint
+        isAssistant
+          ? isHint
             ? "bg-secondary/30 rounded-tl-md text-foreground"
             : "bg-accent/20 rounded-tl-md text-foreground"
           : "bg-primary/20 rounded-tr-md text-foreground"
       }`}>
-        {message.isHint && (
+        {isHint && (
           <span className="inline-block px-2 py-1 mb-2 text-xs font-bold uppercase tracking-wide bg-secondary text-secondary-foreground rounded-lg">
             Hint
           </span>
         )}
-        <p className="text-base leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        {isAssistant ? (
+          <div className="prose prose-sm max-w-none text-foreground prose-p:leading-relaxed prose-p:my-1 prose-ol:my-1 prose-ul:my-1 prose-li:my-0.5 prose-headings:text-foreground prose-strong:text-foreground">
+            <ReactMarkdown>{text}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-base leading-relaxed whitespace-pre-wrap">{text}</p>
+        )}
       </div>
     </div>
   )
