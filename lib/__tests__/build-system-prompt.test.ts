@@ -9,7 +9,7 @@ describe("buildSystemPrompt", () => {
 
   it("uses older student tone for grade > 4", () => {
     const prompt = buildSystemPrompt(5, "math", "explain")
-    expect(prompt).toMatch(/older students/i)
+    expect(prompt).toMatch(/middle-school students/i)
   })
 
   it("includes math subject block for math", () => {
@@ -24,7 +24,8 @@ describe("buildSystemPrompt", () => {
 
   it("includes explain task for explain mode", () => {
     const prompt = buildSystemPrompt(3, "math", "explain")
-    expect(prompt).toMatch(/step-by-step explanation/i)
+    expect(prompt).toMatch(/EXPLAIN MODE/)
+    expect(prompt).toMatch(/ONE STEP at a time/i)
   })
 
   it("includes strict hint rules for hint mode", () => {
@@ -43,6 +44,6 @@ describe("buildSystemPrompt", () => {
     const g4 = buildSystemPrompt(4, "math", "explain")
     const g5 = buildSystemPrompt(5, "math", "explain")
     expect(g4).toMatch(/young children/i)
-    expect(g5).toMatch(/older students/i)
+    expect(g5).toMatch(/middle-school students/i)
   })
 })

@@ -42,7 +42,7 @@ describe("HomePage", () => {
     const saved: UIMessage[] = [
       { id: "1", role: "user", parts: [{ type: "text", text: "hello" }] },
     ]
-    localStorage.setItem("brighterly-messages", JSON.stringify(saved))
+    localStorage.setItem("brighterteach-messages", JSON.stringify(saved))
     render(<HomePage />)
     // messages are passed as initialMessages to useChat — no setMessages call needed
     expect(setMessages).not.toHaveBeenCalled()
@@ -50,7 +50,7 @@ describe("HomePage", () => {
 
   it("hydrates session state from localStorage", async () => {
     const session = { grade: 5, subject: "reading", mode: "hint", hasSubmitted: true }
-    localStorage.setItem("brighterly-session", JSON.stringify(session))
+    localStorage.setItem("brighterteach-session", JSON.stringify(session))
     render(<HomePage />)
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/ask a follow-up/i)).not.toBeDisabled()
@@ -102,13 +102,13 @@ describe("HomePage", () => {
     mockMessages = [
       { id: "1", role: "user", parts: [{ type: "text", text: "hello" }] },
     ]
-    localStorage.setItem("brighterly-messages", JSON.stringify(mockMessages))
-    localStorage.setItem("brighterly-session", JSON.stringify({ grade: 3 }))
+    localStorage.setItem("brighterteach-messages", JSON.stringify(mockMessages))
+    localStorage.setItem("brighterteach-session", JSON.stringify({ grade: 3 }))
 
     render(<HomePage />)
     await user.click(screen.getByRole("button", { name: /start new session/i }))
 
-    expect(localStorage.getItem("brighterly-messages")).toBeNull()
-    expect(localStorage.getItem("brighterly-session")).toBeNull()
+    expect(localStorage.getItem("brighterteach-messages")).toBeNull()
+    expect(localStorage.getItem("brighterteach-session")).toBeNull()
   })
 })

@@ -3,7 +3,7 @@ description: Core tech stack and global React/Next.js patterns
 globs: ["**/*.tsx", "**/*.ts"]
 alwaysApply: true
 ---
-# Brighterly Frontend Stack
+# BrighterTeach Frontend Stack
 - Framework: Next.js App Router.
 - Styling: Tailwind CSS and shadcn/ui.
 - Components: Always use functional components and React hooks.
